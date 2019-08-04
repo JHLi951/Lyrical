@@ -18,6 +18,7 @@ def authenticate(scope):
     return token
 
 def get_current_info():
+    lyrics = ""
     token = authenticate('user-read-currently-playing')
 
     # If the token is valid, gets the current playing song
@@ -33,20 +34,24 @@ def get_current_info():
         current_song_name = current_song['item']['name']
         current_song_album = current_song['item']['album']['name']
 
-        print("Artists:", current_song_artists)
-        print("Song Name:", current_song_name)
-        print("Song Album:", current_song_album)
-        print("~~~~~~~~~~~~~~~~~~~~~~~")
+        # print("Artists:", current_song_artists)
+        # print("Song Name:", current_song_name)
+        # print("Song Album:", current_song_album)
+        # print("~~~~~~~~~~~~~~~~~~~~~~~")
 
         genius = lyricsgenius.Genius(credentials.GENIUS_ACCESS_TOKEN)
         
         try:
             song_lyrics = genius.search_song(current_song_name, current_song_artists[0]).lyrics
-            print(song_lyrics)
+            # print(song_lyrics)
+            lyrics = song_lyrics
         except:
             print("Song lyrics not found on Genius")
+
+        return current_song_artists, current_song_name, current_song_album, lyrics
     else:
         print("Need a valid token")
+
 
 def get_user_follow_info():
     token = authenticate('user-follow-read')
@@ -85,5 +90,4 @@ def check_client_credentials_flow():
     pprint.pprint(playlists)
 
 # get_user_follow_info()
-# get_current_info()
-check_token()
+get_current_info()
