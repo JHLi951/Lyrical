@@ -86,8 +86,5 @@ def check_client_credentials_flow():
         client_secret=credentials.CLIENT_SECRET
     )
     sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
-    playlists = sp.user_playlists('jellyli951')
+    playlists = sp.user_playlists(credentials.USERNAME)
     pprint.pprint(playlists)
-
-# get_user_follow_info()
-get_current_info()
