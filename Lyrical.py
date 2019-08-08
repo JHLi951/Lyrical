@@ -119,8 +119,8 @@ def search_song():
                 for artist in song['artists']:
                     artists.append(artist['name'])
                 album = song['album']['name']
-                print("{}) Name: {},\
-                        \n    Artists: {},\
+                print("{}) Name: {}\
+                        \n    Artists: {}\
                         \n    Album: {}\n".format(counter, name, artists, album))
                 counter += 1
             
@@ -138,9 +138,11 @@ def search_song():
                     need_valid_input = False
                 elif string_is_int(to_continue):
                     next_page = False
-                    print("Selected song number ", to_continue)
-                    pprint.pprint(result['tracks']['items'][int(to_continue) - 1]['name'])
                     need_valid_input = False
+                    print("Selected song number", to_continue)
+                    # pprint.pprint(result['tracks']['items'][int(to_continue) - 1]['name'])
+                    return (result['tracks']['items'][int(to_continue) - 1]['name'], result['tracks']['items'][int(to_continue) - 1]['id'])
+                    
                 elif to_continue == "esc":
                     next_page = False
                     need_valid_input = False
@@ -158,3 +160,94 @@ def string_is_int(s):
         return True
     except ValueError:
         return False
+
+
+def get_song_audio_analysis():
+    token = authenticate('')
+
+    if token:
+        song_name, song_id = search_song()
+        sp = spotipy.Spotify(auth=token)
+
+        result = sp.audio_analysis(song_id)
+        with open('{}_audio_analysis.txt'.format(song_name), 'w') as f:
+            pprint.pprint(result, f)
+        print("Text file created successfully")
+    else:
+        print("Invalid token")
+
+
+
+
+
+# Given a playlist, returns an ordered list of the most danceable songs in the playlist
+# Functions used: authenticate, get_playlists, get_danceability
+def get_playlist_most_danceable_songs(playlist):
+    token = authenticate('')
+
+    if token:
+        sp = spotipy.Spotify(auth=token)
+        users_playlists = get_playlists()
+        playlist_songs = []
+
+        if playlist in users_playlists:
+            playlist_id = users_playlists[playlist]
+        else:
+            print("Invalid playlist")
+
+        results = sp.user_playlist_tracks(credentials.USERNAME,
+                                            playlist_id)
+
+        for song in results['items']:
+            song_id = song['track']['id']
+            song_name = song['track']['name']
+            song_score = get_danceability(song_id)
+
+            playlist_songs.append((song_name, song_score))
+
+        playlist_songs.sort(key=lambda x: x[1], reverse=True)
+        return playlist_songs
+
+    else:
+        print("Invalid token")
+
+
+# Get all playlists for the current user and returns a dictionary with 
+# playlist names mapped to their playlist IDs
+def get_playlists():
+    token = authenticate('')
+    
+    if token:
+        playlists = {}
+
+        sp = spotipy.Spotify(auth=token)
+        results = sp.user_playlists(credentials.USERNAME)
+        
+        for playlist in results['items']:
+            playlists[playlist['name']] = playlist['id']
+
+        return playlists
+    else:
+        print("Invalid token")
+
+
+# Given a song (in the form of the song id), returns the audio features
+def get_audio_features(song_id):
+    token = authenticate("")
+
+    if token:
+        sp = spotipy.Spotify(auth=token)
+        result = sp.audio_features(song_id)
+
+        return result
+    else:
+        print("Invalid token")
+
+
+# Given a song id, extracts and returns the danceability from the audio features
+# Functions used: get_audio_features
+def get_danceability(song_id):
+    features = get_audio_features(song_id)
+    return features[0]['danceability']
+   
+# get_playlist_most_danceable_songs('Joe\'s World')
