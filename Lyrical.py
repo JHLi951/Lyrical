@@ -4,6 +4,8 @@ import credentials
 import pprint
 import lyricsgenius
 from spotipy.oauth2 import SpotifyClientCredentials
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 def authenticate(scope):
@@ -187,7 +189,7 @@ def get_playlist_most_danceable_songs(playlist):
 
     if token:
         sp = spotipy.Spotify(auth=token)
-        users_playlists = get_playlists()
+        users_playlists = get_playlists(sp)
         playlist_songs = []
 
         if playlist in users_playlists:
@@ -195,13 +197,12 @@ def get_playlist_most_danceable_songs(playlist):
         else:
             print("Invalid playlist")
 
-        results = sp.user_playlist_tracks(credentials.USERNAME,
-                                            playlist_id)
+        results = get_playlist_songs(playlist_id, sp)
 
         for song in results['items']:
             song_id = song['track']['id']
             song_name = song['track']['name']
-            song_score = get_danceability(song_id)
+            song_score = get_feature(song_id, 'danceability', sp)
 
             playlist_songs.append((song_name, song_score))
 
@@ -214,40 +215,75 @@ def get_playlist_most_danceable_songs(playlist):
 
 # Get all playlists for the current user and returns a dictionary with 
 # playlist names mapped to their playlist IDs
-def get_playlists():
-    token = authenticate('')
-    
-    if token:
-        playlists = {}
+def get_playlists(sp):
+    playlists = {}
 
-        sp = spotipy.Spotify(auth=token)
-        results = sp.user_playlists(credentials.USERNAME)
+    results = sp.user_playlists(credentials.USERNAME)
         
-        for playlist in results['items']:
-            playlists[playlist['name']] = playlist['id']
+    for playlist in results['items']:
+        playlists[playlist['name']] = playlist['id']
 
-        return playlists
-    else:
-        print("Invalid token")
+    return playlists
 
+
+def get_playlist_songs(playlist_id, sp):
+    results = sp.user_playlist_tracks(
+        credentials.USERNAME,
+        playlist_id
+    )
+
+    return results
 
 # Given a song (in the form of the song id), returns the audio features
-def get_audio_features(song_id):
+def get_audio_features(song_id, sp):
+    return sp.audio_features(song_id)
+
+    
+# Given a song id, extracts and returns the danceability from the audio features
+# Functions used: get_audio_features
+def get_feature(song_id, feature, sp):
+    features = get_audio_features(song_id, sp)
+    return features[0][feature]
+
+
+# List of features: duration_ms, key, mode, time_signature,
+#   acousticness, danceability, energy, instrumentalness,
+#   liveness, loudness, speechiness, valence, tempo. id, uri
+#   track_href, analysis_url, type
+def graph_playlist_feature(playlist_name, feature):
     token = authenticate("")
 
     if token:
         sp = spotipy.Spotify(auth=token)
-        result = sp.audio_features(song_id)
 
-        return result
+        X = []
+        y = []
+
+        playlists = get_playlists(sp)
+        if playlist_name in playlists:
+            playlist_id = playlists[playlist_name]
+
+        playlist_songs = get_playlist_songs(playlist_id, sp)
+
+        for song in playlist_songs['items']:  
+            song_name = song['track']['name']
+            X.append(song_name)
+            song_id = song['track']['id']
+            speech_level = get_feature(song_id, feature, sp)
+            y.append(speech_level)
+
+        index = np.arange(len(X))
+        plt.bar(index, y)
+        plt.xlabel('Song')
+        plt.ylabel('Value')
+        plt.xticks(index, X, rotation=90)
+        plt.title("{} Values ({})".format(feature, playlist_name))
+        plt.show()
+
     else:
         print("Invalid token")
+    
 
 
-# Given a song id, extracts and returns the danceability from the audio features
-# Functions used: get_audio_features
-def get_danceability(song_id):
-    features = get_audio_features(song_id)
-    return features[0]['danceability']
-   
-# get_playlist_most_danceable_songs('Joe\'s World')
+# pprint.pprint(get_playlist_most_danceable_songs('calm'))
+# graph_playlist_feature('Joe\'s World', 'tempo')
